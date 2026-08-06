@@ -31,7 +31,7 @@ function initPublicPage() {
 
 function initLoginPage() {
     if (getCurrentUser()) {
-        location.href = 'index.php';
+        location.href = 'index.html';
         return;
     }
 
@@ -67,13 +67,13 @@ function initLoginPage() {
         }
 
         setCurrentUser({ full_name: user.full_name, email: user.email });
-        location.href = 'index.php';
+        location.href = 'index.html';
     });
 }
 
 function initSignupPage() {
     if (getCurrentUser()) {
-        location.href = 'index.php';
+        location.href = 'index.html';
         return;
     }
 
@@ -121,14 +121,14 @@ function initSignupPage() {
         const users = getStoredUsers();
         users.push({ full_name: fullName, email, password });
         saveStoredUsers(users);
-        location.href = 'login.php?registered=1';
+        location.href = 'login.html?registered=1';
     });
 }
 
 function initDashboardPage() {
     const user = getCurrentUser();
     if (!user) {
-        location.href = 'login.php';
+        location.href = 'login.html';
         return;
     }
 
@@ -347,7 +347,7 @@ function setCurrentUser(user) {
 
 function logoutUser() {
     localStorage.removeItem('shieldosCurrentUser');
-    location.href = 'login.php';
+    location.href = 'login.html';
 }
 
 function getVaultEntriesForUser(email) {
