@@ -1,17 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const pageId = document.body.id;
-
-    if (pageId === 'loginPage') {
+    // Initialize behavior based on presence of page-specific elements.
+    if (document.getElementById('loginForm')) {
         initLoginPage();
         return;
     }
 
-    if (pageId === 'signupPage') {
+    if (document.getElementById('signupForm')) {
         initSignupPage();
         return;
     }
 
-    if (pageId === 'dashboardPage') {
+    // Dashboard page checks for a known dashboard element
+    if (document.getElementById('savePasswordBtn') || document.getElementById('vaultContent')) {
         initDashboardPage();
         return;
     }
@@ -30,12 +30,7 @@ function initPublicPage() {
 }
 
 function initLoginPage() {
-    if (getCurrentUser()) {
-        location.href = 'index.html';
-        return;
-    }
-
-    const form = document.getElementById('loginForm');
+    // For server-backed login form, keep only UI enhancements (no client-side auth interception).
     const toggleButton = document.getElementById('loginTogglePassword');
     const passwordInput = document.getElementById('loginPassword');
     const eyeIcon = document.getElementById('loginEyeIcon');
@@ -43,95 +38,21 @@ function initLoginPage() {
 
     showQueryMessage(messageEl);
     setPasswordToggle(toggleButton, passwordInput, eyeIcon);
-
-    form.addEventListener('submit', event => {
-        event.preventDefault();
-
-        const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-        const password = passwordInput.value;
-
-        if (!email || !password) {
-            showFormMessage(messageEl, 'Please enter both email and password.', 'danger');
-            return;
-        }
-
-        const user = findUserByEmail(email);
-        if (!user) {
-            showFormMessage(messageEl, 'No account found for that email.', 'danger');
-            return;
-        }
-
-        if (user.password !== password) {
-            showFormMessage(messageEl, 'Invalid email or password.', 'danger');
-            return;
-        }
-
-        setCurrentUser({ full_name: user.full_name, email: user.email });
-        location.href = 'index.html';
-    });
 }
 
 function initSignupPage() {
-    if (getCurrentUser()) {
-        location.href = 'index.html';
-        return;
-    }
-
-    const form = document.getElementById('signupForm');
+    // For server-backed signup form, only provide UI helpers (no client-side registration).
     const toggleButton = document.getElementById('signupTogglePassword');
     const passwordInput = document.getElementById('signupPassword');
     const eyeIcon = document.getElementById('signupEyeIcon');
     const messageEl = document.getElementById('signupMessage');
 
     setPasswordToggle(toggleButton, passwordInput, eyeIcon);
-
-    form.addEventListener('submit', event => {
-        event.preventDefault();
-
-        const fullName = document.getElementById('signupFullName').value.trim();
-        const email = document.getElementById('signupEmail').value.trim().toLowerCase();
-        const password = passwordInput.value;
-        const confirmPassword = document.getElementById('signupConfirmPassword').value;
-
-        if (!fullName || !email || !password || !confirmPassword) {
-            showFormMessage(messageEl, 'Please complete all fields.', 'danger');
-            return;
-        }
-
-        if (!validateEmail(email)) {
-            showFormMessage(messageEl, 'Please enter a valid email address.', 'danger');
-            return;
-        }
-
-        if (password.length < 8) {
-            showFormMessage(messageEl, 'Password must be at least 8 characters long.', 'danger');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            showFormMessage(messageEl, 'Passwords do not match.', 'danger');
-            return;
-        }
-
-        if (findUserByEmail(email)) {
-            showFormMessage(messageEl, 'An account with that email already exists.', 'danger');
-            return;
-        }
-
-        const users = getStoredUsers();
-        users.push({ full_name: fullName, email, password });
-        saveStoredUsers(users);
-        location.href = 'login.html?registered=1';
-    });
 }
 
 function initDashboardPage() {
+    // If a client-side session exists use it, otherwise the server-side page renders user info.
     const user = getCurrentUser();
-    if (!user) {
-        location.href = 'login.html';
-        return;
-    }
-
     const greeting = document.getElementById('navGreeting');
     const logoutBtn = document.getElementById('logoutBtn');
     const savePasswordBtn = document.getElementById('savePasswordBtn');
@@ -154,12 +75,22 @@ function initDashboardPage() {
     const passTypes = document.getElementById('passTypes');
     const saveStatus = document.getElementById('saveStatus');
 
-    const firstName = user.full_name.split(' ')[0] || user.full_name;
-    greeting.textContent = `Hi, ${firstName}`;
+    if (user && greeting) {
+        const firstName = user.full_name.split(' ')[0] || user.full_name;
+        greeting.textContent = `Hi, ${firstName}`;
+    }
 
-    logoutBtn.addEventListener('click', () => {
-        logoutUser();
-    });
+    if (logoutBtn) {
+        // If server logout is available, navigate to it; otherwise fallback to client logout.
+        logoutBtn.addEventListener('click', () => {
+            if (typeof fetch === 'function') {
+                // Navigate to server logout endpoint.
+                location.href = 'logout.php';
+            } else {
+                logoutUser();
+            }
+        });
+    }
 
     setPasswordToggle(document.getElementById('togglePassword'), passwordInput, document.getElementById('eyeIcon'));
 
@@ -216,25 +147,32 @@ function initDashboardPage() {
     }
 
     if (savePasswordBtn) {
-        savePasswordBtn.addEventListener('click', () => {
-            const password = passwordInput.value.trim() || generatedPassword.textContent.trim();
-            if (!password || password === 'Click "Generate" to create a password') {
-                saveStatus.textContent = 'Enter or generate a password first.';
-                saveStatus.className = 'small text-danger';
-                return;
-            }
+        if (user) {
+            savePasswordBtn.addEventListener('click', () => {
+                const password = passwordInput.value.trim() || generatedPassword.textContent.trim();
+                if (!password || password === 'Click "Generate" to create a password') {
+                    saveStatus.textContent = 'Enter or generate a password first.';
+                    saveStatus.className = 'small text-danger';
+                    return;
+                }
 
-            const entry = {
-                label: 'Saved password',
-                password,
-                created_at: new Date().toLocaleString()
-            };
+                const entry = {
+                    label: 'Saved password',
+                    password,
+                    created_at: new Date().toLocaleString()
+                };
 
-            addVaultEntry(user.email, entry);
-            saveStatus.textContent = 'Password saved to your vault.';
-            saveStatus.className = 'small text-success';
-            renderVaultEntries(user.email);
-        });
+                addVaultEntry(user.email, entry);
+                saveStatus.textContent = 'Password saved to your vault.';
+                saveStatus.className = 'small text-success';
+                renderVaultEntries(user.email);
+            });
+        } else {
+            // If no client-side user, redirect to server login when save is clicked.
+            savePasswordBtn.addEventListener('click', () => {
+                location.href = 'login.php';
+            });
+        }
     }
 
     if (auditBtn) {
@@ -275,7 +213,9 @@ function initDashboardPage() {
         });
     }
 
-    renderVaultEntries(user.email);
+    if (user) {
+        renderVaultEntries(user.email);
+    }
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             e.preventDefault();
@@ -347,7 +287,7 @@ function setCurrentUser(user) {
 
 function logoutUser() {
     localStorage.removeItem('shieldosCurrentUser');
-    location.href = 'login.html';
+    location.href = 'login.php';
 }
 
 function getVaultEntriesForUser(email) {
