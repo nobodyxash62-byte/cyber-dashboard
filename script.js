@@ -147,32 +147,65 @@ function initDashboardPage() {
     }
 
     if (savePasswordBtn) {
-        if (user) {
-            savePasswordBtn.addEventListener('click', () => {
-                const password = passwordInput.value.trim() || generatedPassword.textContent.trim();
-                if (!password || password === 'Click "Generate" to create a password') {
+        const serverUser = (typeof window !== 'undefined' && window.SHIELDOS_USER) ? window.SHIELDOS_USER : null;
+
+        savePasswordBtn.addEventListener('click', () => {
+            const password = (passwordInput && passwordInput.value.trim()) || (generatedPassword && generatedPassword.textContent.trim());
+            if (!password || password === 'Click "Generate" to create a password') {
+                if (saveStatus) {
                     saveStatus.textContent = 'Enter or generate a password first.';
                     saveStatus.className = 'small text-danger';
-                    return;
                 }
+                return;
+            }
 
-                const entry = {
-                    label: 'Saved password',
-                    password,
-                    created_at: new Date().toLocaleString()
-                };
+            const label = 'Saved password';
 
-                addVaultEntry(user.email, entry);
-                saveStatus.textContent = 'Password saved to your vault.';
-                saveStatus.className = 'small text-success';
-                renderVaultEntries(user.email);
-            });
-        } else {
-            // If no client-side user, redirect to server login when save is clicked.
-            savePasswordBtn.addEventListener('click', () => {
-                location.href = 'login.php';
-            });
-        }
+            if (serverUser) {
+                // Save via server endpoint when authenticated server-side
+                fetch('save_password.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ password, label }).toString()
+                }).then(resp => resp.json()).then(data => {
+                    if (data && data.success) {
+                        if (saveStatus) {
+                            saveStatus.textContent = 'Password saved to server vault.';
+                            saveStatus.className = 'small text-success';
+                        }
+                        // Reload to show server-rendered vault entries
+                        setTimeout(() => location.reload(), 600);
+                    } else {
+                        if (saveStatus) {
+                            saveStatus.textContent = data.message || 'Could not save password.';
+                            saveStatus.className = 'small text-danger';
+                        }
+                    }
+                }).catch(err => {
+                    if (saveStatus) {
+                        saveStatus.textContent = 'Server error while saving password.';
+                        saveStatus.className = 'small text-danger';
+                    }
+                });
+                return;
+            }
+
+            // Fallback: client-side vault storage
+            const entry = { label, password, created_at: new Date().toLocaleString() };
+            const clientUser = user;
+            if (clientUser) {
+                addVaultEntry(clientUser.email, entry);
+                if (saveStatus) {
+                    saveStatus.textContent = 'Password saved to your vault.';
+                    saveStatus.className = 'small text-success';
+                }
+                renderVaultEntries(clientUser.email);
+                return;
+            }
+
+            // If no server or client user, redirect to login
+            location.href = 'login.php';
+        });
     }
 
     if (auditBtn) {

@@ -269,6 +269,10 @@ $savedPasswords = getVaultEntries($user['id']);
     </section>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Expose current server user to client scripts when available
+        window.SHIELDOS_USER = <?= json_encode(['id' => $user['id'], 'email' => $user['email']]); ?>;
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
