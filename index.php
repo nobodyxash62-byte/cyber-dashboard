@@ -32,9 +32,12 @@ $savedPasswords = getVaultEntries($user['id']);
                     <li class="nav-item ms-lg-3">
                         <span class="nav-link text-muted">Hi, <?= htmlspecialchars(explode(' ', trim($user['full_name']))[0]) ?></span>
                     </li>
-                    <li class="nav-item">
-                        <a class="btn btn-outline-primary btn-sm ms-2" href="logout.php">Logout</a>
-                    </li>
+                        <li class="nav-item">
+                            <a class="btn btn-outline-secondary btn-sm ms-2" href="login.php?force=1">Switch</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-outline-primary btn-sm ms-2" href="logout.php">Logout</a>
+                        </li>
                 </ul>
             </div>
         </div>

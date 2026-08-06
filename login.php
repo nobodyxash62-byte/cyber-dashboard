@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/auth.php';
 
-if (currentUser()) {
+// If already logged in, redirect to dashboard unless caller requests the login form explicitly
+if (currentUser() && !isset($_GET['force'])) {
     header('Location: index.php');
     exit;
 }
