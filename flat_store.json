@@ -1,0 +1,12 @@
+{
+    "users": [
+        {
+            "id": 1,
+            "full_name": "Test User",
+            "email": "test@example.com",
+            "password_hash": "$2y$10$qIbZiC7Qo9hjLK5ArcTKZug9HK.RrX7.wvYIY7HZ9BFizGSjhE\/Ay",
+            "created_at": "2026-08-13 10:46:08"
+        }
+    ],
+    "vault_entries": []
+}

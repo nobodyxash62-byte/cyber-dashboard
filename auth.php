@@ -121,18 +121,29 @@ function registerUser(string $fullName, string $email, string $password): array 
     if (getUserByEmail($email)) {
         return ['success' => false, 'message' => 'An account with that email already exists.'];
     }
+    try {
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare('INSERT INTO users (full_name, email, password_hash) VALUES (:full_name, :email, :password_hash)');
+        $ok = $stmt->execute([
+            'full_name' => $fullName,
+            'email' => $email,
+            'password_hash' => $passwordHash,
+        ]);
 
-    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare('INSERT INTO users (full_name, email, password_hash) VALUES (:full_name, :email, :password_hash)');
-    $stmt->execute([
-        'full_name' => $fullName,
-        'email' => $email,
-        'password_hash' => $passwordHash,
-    ]);
+        if ($ok) {
+            // Do NOT auto-login the user after registration. Require explicit login.
+            return ['success' => true];
+        }
 
-    // Do NOT auto-login the user after registration. Require explicit login.
-    // Return success so caller (signup.php) can redirect the user to the login page.
-    return ['success' => true];
+        return ['success' => false, 'message' => 'Failed to create account. Please try again.'];
+    } catch (PDOException $e) {
+        // If there was a constraint violation (unique email) or other DB error, return a friendly message.
+        $msg = $e->getMessage();
+        if (strpos($msg, 'UNIQUE') !== false || strpos($msg, 'unique') !== false) {
+            return ['success' => false, 'message' => 'An account with that email already exists.'];
+        }
+        return ['success' => false, 'message' => 'Database error: ' . $e->getMessage()];
+    }
 }
 
 function loginUser(string $email, string $password): bool {

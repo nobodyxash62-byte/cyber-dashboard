@@ -62,10 +62,10 @@ $entries = getVaultEntries($user['id']);
                         <tbody>
                             <?php foreach ($entries as $entry): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($entry['label']) ?></td>
-                                    <td><?= htmlspecialchars($entry['created_at']) ?></td>
-                                    <td><code><?= htmlspecialchars($entry['password']) ?></code></td>
-                                    <td class="text-end">
+                                    <td data-label="Label"><?= htmlspecialchars($entry['label']) ?></td>
+                                    <td data-label="Saved at"><?= htmlspecialchars($entry['created_at']) ?></td>
+                                    <td data-label="Password"><code><?= htmlspecialchars($entry['password']) ?></code></td>
+                                    <td data-label="Action" class="text-end">
                                         <form method="POST" action="vault.php" onsubmit="return confirm('Delete this saved password?');" style="display:inline-block;">
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="entry_id" value="<?= (int)$entry['id'] ?>">

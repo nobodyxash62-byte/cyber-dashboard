@@ -3,6 +3,9 @@ require_once __DIR__ . '/auth.php';
 requireLogin();
 $user = currentUser();
 $savedPasswords = getVaultEntries($user['id']);
+$emailStatus = $_SESSION['email_status'] ?? '';
+$emailStatusDetail = $_SESSION['email_status_detail'] ?? '';
+unset($_SESSION['email_status'], $_SESSION['email_status_detail']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -30,10 +33,10 @@ $savedPasswords = getVaultEntries($user['id']);
                     <li class="nav-item"><a class="nav-link" href="#vault">Vault</a></li>
                     <li class="nav-item"><a class="nav-link" href="#generator">Generator</a></li>
                     <li class="nav-item ms-lg-3">
-                        <span class="nav-link text-muted">Hi, <?= htmlspecialchars(explode(' ', trim($user['full_name']))[0]) ?></span>
+                        <span id="navGreeting" class="nav-link text-muted">Hi, <?= htmlspecialchars(explode(' ', trim($user['full_name']))[0]) ?></span>
                     </li>
                         <li class="nav-item">
-                            <a class="btn btn-outline-primary btn-sm ms-2" href="logout.php">Logout</a>
+                            <a id="logoutBtn" class="btn btn-outline-primary btn-sm ms-2" href="logout.php">Logout</a>
                         </li>
                 </ul>
             </div>
@@ -230,34 +233,60 @@ $savedPasswords = getVaultEntries($user['id']);
                             <h5 class="mb-0"><i class="fa-solid fa-lock me-2"></i>Your saved passwords in the system</h5>
                         </div>
                         <div class="card-body-custom">
-                            <p class="text-muted mb-4">These saved passwords are stored locally in your dashboard vault. No password is sent by email.</p>
-
-                            <?php if (count($savedPasswords) === 0): ?>
-                                <div class="alert alert-info">
-                                    No saved passwords found yet. Generate a password and save it using the button above.
+                            <?php if ($emailStatus === 'sent'): ?>
+                                <div class="alert alert-success">Password sent to your email successfully.</div>
+                            <?php elseif ($emailStatus === 'placeholder'): ?>
+                                <div class="alert alert-danger">
+                                    SMTP is not configured correctly. Open mail_config.php and fix the settings.
+                                    <?php if ($emailStatusDetail): ?>
+                                        <div class="small text-muted"><?= htmlspecialchars($emailStatusDetail) ?></div>
+                                    <?php endif; ?>
                                 </div>
-                            <?php else: ?>
-                                <div class="table-responsive">
-                                    <table class="table table-striped align-middle">
-                                        <thead>
-                                            <tr>
-                                                <th>Label</th>
-                                                <th>Password</th>
-                                                <th>Saved at</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($savedPasswords as $entry): ?>
-                                                <tr>
-                                                    <td><?= htmlspecialchars($entry['label']) ?></td>
-                                                    <td><code><?= htmlspecialchars($entry['password']) ?></code></td>
-                                                    <td><?= htmlspecialchars($entry['created_at']) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
+                            <?php elseif ($emailStatus === 'smtp'): ?>
+                                <div class="alert alert-danger">
+                                    SMTP login failed. Check your Gmail App Password, 2-Step Verification, and Gmail address in mail_config.php.
+                                    <?php if ($emailStatusDetail): ?>
+                                        <div class="small text-muted"><?= htmlspecialchars($emailStatusDetail) ?></div>
+                                    <?php endif; ?>
                                 </div>
                             <?php endif; ?>
+                            <p class="text-muted mb-4">Your saved passwords are stored in the vault and can be emailed to your account.</p>
+
+                            <div id="vaultContent">
+                                <?php if (count($savedPasswords) === 0): ?>
+                                    <div class="alert alert-info" id="vaultEmptyMessage">
+                                        No saved passwords found yet. Generate a password and save it using the button above.
+                                    </div>
+                                <?php else: ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Label</th>
+                                                    <th>Password</th>
+                                                    <th>Saved at</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($savedPasswords as $entry): ?>
+                                                    <tr>
+                                                        <td data-label="Label"><?= htmlspecialchars($entry['label']) ?></td>
+                                                        <td data-label="Password"><code><?= htmlspecialchars($entry['password']) ?></code></td>
+                                                        <td data-label="Saved at"><?= htmlspecialchars($entry['created_at']) ?></td>
+                                                        <td data-label="Action">
+                                                            <form method="POST" action="send_to_email.php">
+                                                                <input type="hidden" name="entry_id" value="<?= (int)$entry['id'] ?>">
+                                                                <button type="submit" class="btn btn-sm btn-outline-primary">Send to My Email</button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -268,7 +297,7 @@ $savedPasswords = getVaultEntries($user['id']);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Expose current server user to client scripts when available
-        window.SHIELDOS_USER = <?= json_encode(['id' => $user['id'], 'email' => $user['email']]); ?>;
+        window.SHIELDOS_USER = <?= json_encode(['id' => $user['id'], 'email' => $user['email'], 'full_name' => $user['full_name']]); ?>;
     </script>
     <script src="script.js"></script>
 </body>

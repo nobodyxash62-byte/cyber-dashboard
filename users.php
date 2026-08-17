@@ -88,11 +88,11 @@ $users = $stmt->fetchAll();
                 <tbody>
                     <?php foreach ($users as $u): ?>
                         <tr>
-                            <td><?= (int)$u['id'] ?></td>
-                            <td><?= htmlspecialchars($u['full_name']) ?></td>
-                            <td><?= htmlspecialchars($u['email']) ?></td>
-                            <td><?= htmlspecialchars($u['created_at']) ?></td>
-                            <td class="text-end">
+                            <td data-label="ID"><?= (int)$u['id'] ?></td>
+                            <td data-label="Full name"><?= htmlspecialchars($u['full_name']) ?></td>
+                            <td data-label="Email"><?= htmlspecialchars($u['email']) ?></td>
+                            <td data-label="Created at"><?= htmlspecialchars($u['created_at']) ?></td>
+                            <td data-label="Action" class="text-end">
                                 <form method="POST" action="users.php" onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');" style="display:inline-block">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
