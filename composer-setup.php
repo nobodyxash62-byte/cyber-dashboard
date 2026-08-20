@@ -363,7 +363,7 @@ function getPlatformIssues(&$errors, &$warnings, $install)
             'Add the following to the end of your `php.ini`:',
             '    allow_url_fopen = On',
             $iniMessage
-        );
+        );                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
     }
 
     if (extension_loaded('ionCube Loader') && ioncube_loader_iversion() < 40009) {
