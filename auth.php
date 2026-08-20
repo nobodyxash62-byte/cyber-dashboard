@@ -23,7 +23,6 @@ function getUserByEmail(string $email) {
 }
 
 function getVaultCipherKey(): string {
-    // Change this secret to a strong random value before deploying.
     $key = defined('VAULT_SECRET_KEY') ? VAULT_SECRET_KEY : 'shieldos-default-vault-secret';
     return substr(hash('sha256', $key, true), 0, 32);
 }
@@ -131,13 +130,11 @@ function registerUser(string $fullName, string $email, string $password): array 
         ]);
 
         if ($ok) {
-            // Do NOT auto-login the user after registration. Require explicit login.
             return ['success' => true];
         }
 
         return ['success' => false, 'message' => 'Failed to create account. Please try again.'];
     } catch (PDOException $e) {
-        // If there was a constraint violation (unique email) or other DB error, return a friendly message.
         $msg = $e->getMessage();
         if (strpos($msg, 'UNIQUE') !== false || strpos($msg, 'unique') !== false) {
             return ['success' => false, 'message' => 'An account with that email already exists.'];
@@ -176,3 +173,4 @@ function logoutUser() {
     }
     session_destroy();
 }
+?>

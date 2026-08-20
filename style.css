@@ -437,6 +437,10 @@ body {
     color: #f59e0b !important;
 }
 
+.text-success {
+    color: var(--accent-green) !important;
+}
+
 /* UTILITIES */
 .opacity-25 {
     opacity: 0.15;
@@ -466,9 +470,17 @@ body {
 }
 
 /* RESPONSIVE */
-@media (max-width: 768px) {
-    .section-spacing {
-        padding: 50px 0;
+@media (max-width: 991.98px) {
+    .navbar .container {
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
+    .navbar .ms-auto {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
 
     .hero-section {
@@ -480,12 +492,165 @@ body {
         padding: 1.5rem;
     }
 
+    .generated-password {
+        flex-wrap: wrap;
+    }
+
+    .generated-password .btn {
+        margin-top: 0.75rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .section-spacing {
+        padding: 50px 0;
+    }
+
     .hero-section .col-lg-6:last-child {
         display: none;
     }
 
     .navbar-brand {
         font-size: 1.2rem;
+    }
+
+    .navbar-nav {
+        width: 100%;
+    }
+
+    .navbar-nav .nav-link {
+        margin: 0.25rem 0;
+    }
+
+    .btn,
+    .btn-sm,
+    .btn-lg {
+        white-space: normal;
+    }
+
+    .generated-password {
+        display: block;
+    }
+
+    .generated-password .btn {
+        margin-left: 0;
+        margin-top: 0.75rem;
+        width: 100%;
+    }
+
+    .auth-page {
+        padding: 1rem;
+    }
+
+    .auth-card {
+        padding: 1.5rem;
+    }
+
+    .auth-card h2 {
+        font-size: 1.6rem;
+    }
+
+    .table-responsive {
+        border: 0;
+    }
+
+    .vault-table,
+    .vault-table thead,
+    .vault-table tbody,
+    .vault-table th,
+    .vault-table td,
+    .vault-table tr {
+        display: block;
+        width: 100%;
+    }
+
+    .vault-table thead {
+        display: none;
+    }
+
+    .vault-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .vault-table tbody tr {
+        display: block;
+        background: #fff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .vault-table td {
+        display: grid;
+        grid-template-columns: 110px minmax(0, 1fr);
+        align-items: start;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        border: none;
+    }
+
+    .vault-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .vault-table td:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+
+    .vault-table td:last-child::before {
+        content: attr(data-label);
+    }
+
+    .vault-table td code {
+        display: block;
+        word-break: break-all;
+        white-space: normal;
+    }
+
+    .vault-table td form,
+    .vault-table td button {
+        width: auto;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .card-header-custom,
+    .card-body-custom {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .stats-number {
+        font-size: 2rem;
+    }
+
+    .auth-wrapper {
+        max-width: 100%;
+    }
+
+    .auth-card {
+        padding: 1.25rem;
+        border-radius: 18px;
+    }
+
+    .auth-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.45rem;
     }
 }
 
@@ -501,18 +666,22 @@ body {
 
 .auth-wrapper {
     width: 100%;
-    max-width: 500px;
+    max-width: 860px;
     margin: 0 auto;
+    display: flex;
 }
 
 .auth-card {
+    width: 100%;
     background: rgba(255, 255, 255, 0.98);
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 24px;
     box-shadow: 0 22px 60px rgba(15, 23, 42, 0.12);
-    padding: 2.5rem;
+    padding: 2rem;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .auth-card::before {
@@ -537,6 +706,11 @@ body {
     border-radius: 50%;
 }
 
+.auth-card-top {
+    position: relative;
+    z-index: 1;
+}
+
 .auth-card .form-control {
     border-radius: 14px;
     border-color: var(--border-color);
@@ -549,7 +723,13 @@ body {
     box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.14);
 }
 
-.auth-card .btn-danger {
+.auth-card .form-label {
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.auth-card .btn-danger,
+.auth-card .btn-primary {
     background-color: var(--primary-blue);
     border-color: var(--primary-blue);
     padding: 0.95rem 1.2rem;
@@ -558,57 +738,7 @@ body {
     box-shadow: 0 10px 20px rgba(0, 102, 204, 0.15);
 }
 
-.auth-card .btn-danger:hover {
-    background-color: var(--primary-blue-dark);
-    border-color: var(--primary-blue-dark);
-}
-
-.auth-card h2 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
-
-.auth-card p {
-    color: var(--text-muted);
-    margin-bottom: 1.5rem;
-}
-
-.auth-card-top {
-    position: relative;
-    z-index: 1;
-}
-
-.auth-icon {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto;
-    display: grid;
-    place-items: center;
-    border-radius: 22px;
-    background: linear-gradient(135deg, rgba(0, 102, 204, 0.15), rgba(0, 102, 204, 0.4));
-    color: var(--primary-blue);
-    font-size: 1.75rem;
-}
-
-.auth-card a {
-    color: var(--primary-blue);
-}
-
-.auth-card a:hover {
-    color: var(--primary-blue-dark);
-}
-
-.auth-card .form-label {
-    font-weight: 600;
-    color: var(--text-dark);
-}
-
-.auth-card .btn-primary {
-    background-color: var(--primary-blue);
-    border-color: var(--primary-blue);
-}
-
+.auth-card .btn-danger:hover,
 .auth-card .btn-primary:hover {
     background-color: var(--primary-blue-dark);
     border-color: var(--primary-blue-dark);
@@ -625,18 +755,6 @@ body {
     margin-bottom: 1.5rem;
 }
 
-.auth-icon {
-    width: 72px;
-    height: 72px;
-    margin: 0 auto;
-    display: grid;
-    place-items: center;
-    border-radius: 24px;
-    background: rgba(0, 102, 204, 0.08);
-    color: var(--primary-blue);
-    font-size: 1.75rem;
-}
-
 .auth-card a {
     color: var(--primary-blue);
 }
@@ -645,51 +763,166 @@ body {
     color: var(--primary-blue-dark);
 }
 
-/* Convert vault/table rows into stacked cards on small screens */
+.auth-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto;
+    display: grid;
+    place-items: center;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(0, 102, 204, 0.15), rgba(0, 102, 204, 0.4));
+    color: var(--primary-blue);
+    font-size: 1.75rem;
+}
+
+/* VAULT LIST STYLES */
+.vault-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    flex: 1;
+}
+
+.vault-item {
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1rem;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+    width: 100%;
+}
+
+.vault-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.8rem;
+}
+
+.vault-item-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.vault-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    background: rgba(0, 102, 204, 0.08);
+    color: var(--primary-blue);
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.vault-label {
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    word-break: break-word;
+}
+
+.vault-date {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.vault-password-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e7edf5;
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+}
+
+.vault-password-text {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    word-break: break-all;
+}
+
+.vault-actions {
+    margin-top: 0.9rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.vault-delete-form {
+    margin: 0;
+}
+
+.delete-confirm-toast {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    width: 100%;
+    padding: 0.9rem 1rem 1rem;
+}
+
+.delete-confirm-message {
+    font-weight: 700;
+    color: var(--text-dark);
+    font-size: 0.96rem;
+}
+
+.delete-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+}
+
+.delete-confirm-actions .btn {
+    min-width: 90px;
+}
+
+.vault-copy-btn {
+    width: auto;
+}
+
+.vault-delete-form button {
+    width: auto;
+}
+
+.vault-date {
+    white-space: nowrap;
+}
+
 @media (max-width: 768px) {
-    .table-responsive table {
-        border-collapse: separate;
+    .vault-item-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
-    .table-responsive thead {
-        display: none;
+    .vault-password-box {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
-    .table-responsive tbody tr {
-        display: block;
-        margin-bottom: 0.75rem;
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 0.75rem;
-        background: #ffffff;
-        box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+    .vault-copy-btn,
+    .vault-delete-form button {
+        width: 100%;
     }
 
-    .table-responsive tbody td {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.45rem 0;
-        border: none;
+    .vault-actions {
+        justify-content: stretch;
     }
 
-    .table-responsive tbody td code {
-        max-width: 60%;
-        display: inline-block;
-        white-space: normal;
-        word-break: break-all;
-    }
-
-    .table-responsive tbody td[data-label]::before {
-        content: attr(data-label);
-        font-weight: 600;
-        color: var(--text-muted);
-        margin-right: 0.5rem;
-        flex: 0 0 38%;
-    }
-
-    .table-responsive tbody td:last-child {
-        justify-content: flex-end;
+    .vault-delete-form {
+        width: 100%;
     }
 }
 

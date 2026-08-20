@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize behavior based on presence of page-specific elements.
     if (document.getElementById('loginForm')) {
         initLoginPage();
         return;
@@ -10,9 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    // Dashboard page checks for a known dashboard element
     if (document.getElementById('savePasswordBtn') || document.getElementById('vaultContent')) {
         initDashboardPage();
+        return;
+    }
+
+    if (document.querySelector('.vault-copy-btn') || document.querySelector('.vault-delete-form')) {
+        initVaultPage();
         return;
     }
 
@@ -30,7 +33,6 @@ function initPublicPage() {
 }
 
 function initLoginPage() {
-    // For server-backed login form, keep only UI enhancements (no client-side auth interception).
     const toggleButton = document.getElementById('loginTogglePassword');
     const passwordInput = document.getElementById('loginPassword');
     const eyeIcon = document.getElementById('loginEyeIcon');
@@ -41,20 +43,15 @@ function initLoginPage() {
 }
 
 function initSignupPage() {
-    // For server-backed signup form, only provide UI helpers (no client-side registration).
-    const toggleButton = document.getElementById('signupTogglePassword');
-    const passwordInput = document.getElementById('signupPassword');
-    const eyeIcon = document.getElementById('signupEyeIcon');
-    const messageEl = document.getElementById('signupMessage');
+    const toggleButton = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('passwordInput');
+    const eyeIcon = document.getElementById('eyeIcon');
 
     setPasswordToggle(toggleButton, passwordInput, eyeIcon);
 }
 
 function initDashboardPage() {
-    // If a client-side session exists use it, otherwise the server-side page renders user info.
-    const user = getCurrentUser();
-    const greeting = document.getElementById('navGreeting');
-    const logoutBtn = document.getElementById('logoutBtn');
+    const user = window.SHIELDOS_USER || null;
     const savePasswordBtn = document.getElementById('savePasswordBtn');
     const copyBtn = document.getElementById('copyBtn');
     const passwordInput = document.getElementById('passwordInput');
@@ -75,22 +72,7 @@ function initDashboardPage() {
     const passTypes = document.getElementById('passTypes');
     const saveStatus = document.getElementById('saveStatus');
 
-    if (user && greeting) {
-        const firstName = user.full_name.split(' ')[0] || user.full_name;
-        greeting.textContent = `Hi, ${firstName}`;
-    }
-
-    if (logoutBtn) {
-        // If server logout is available, navigate to it; otherwise fallback to client logout.
-        logoutBtn.addEventListener('click', () => {
-            if (typeof fetch === 'function') {
-                // Navigate to server logout endpoint.
-                location.href = 'logout.php';
-            } else {
-                logoutUser();
-            }
-        });
-    }
+    showQueryToast();
 
     setPasswordToggle(document.getElementById('togglePassword'), passwordInput, document.getElementById('eyeIcon'));
 
@@ -110,7 +92,7 @@ function initDashboardPage() {
     if (generateBtn) {
         generateBtn.addEventListener('click', () => {
             const length = parseInt(lengthSlider.value, 10) || 16;
-            const name = fullNameField.value.trim();
+            const name = fullNameField ? fullNameField.value.trim() : '';
             const useUppercase = genUppercase.checked;
             const useLowercase = genLowercase.checked;
             const useNumbers = genNumbers.checked;
@@ -126,7 +108,7 @@ function initDashboardPage() {
             updatePasswordStrength(password, passLength, passTypes, strengthBar, strengthText);
             updateSaveButtonState(savePasswordBtn, passwordInput, generatedPassword);
             if (saveStatus) {
-                saveStatus.textContent = 'Password ready to save locally to the vault.';
+                saveStatus.textContent = 'Password ready to save.';
                 saveStatus.className = 'small text-muted';
             }
         });
@@ -139,15 +121,21 @@ function initDashboardPage() {
             try {
                 await navigator.clipboard.writeText(text);
                 copyBtn.textContent = 'Copied';
+                showToast('Password copied to clipboard.', 'success');
                 setTimeout(() => { copyBtn.innerHTML = '<i class="fa-solid fa-copy me-1"></i>Copy'; }, 1500);
             } catch (err) {
                 copyBtn.textContent = 'Copy Failed';
+                showToast('Could not copy the password.', 'error');
             }
         });
     }
 
+    // Modal triggered Save behavior
     if (savePasswordBtn) {
-        const serverUser = (typeof window !== 'undefined' && window.SHIELDOS_USER) ? window.SHIELDOS_USER : null;
+        const saveModalElement = document.getElementById('saveVaultModal');
+        const saveModal = saveModalElement ? new bootstrap.Modal(saveModalElement) : null;
+        const confirmSaveBtn = document.getElementById('confirmSaveVaultBtn');
+        const accountLabelInput = document.getElementById('accountLabelInput');
 
         savePasswordBtn.addEventListener('click', () => {
             const password = (passwordInput && passwordInput.value.trim()) || (generatedPassword && generatedPassword.textContent.trim());
@@ -158,54 +146,64 @@ function initDashboardPage() {
                 }
                 return;
             }
+            if (saveModal) {
+                accountLabelInput.value = '';
+                saveModal.show();
+            }
+        });
 
-            const label = 'Saved password';
+        if (confirmSaveBtn) {
+            confirmSaveBtn.addEventListener('click', async () => {
+                const password = (passwordInput && passwordInput.value.trim()) || (generatedPassword && generatedPassword.textContent.trim());
+                const label = accountLabelInput.value.trim();
 
-            if (serverUser) {
-                // Save via server endpoint when authenticated server-side
-                fetch('save_password.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: new URLSearchParams({ password, label }).toString()
-                }).then(resp => resp.json()).then(data => {
-                    if (data && data.success) {
-                        if (saveStatus) {
-                            saveStatus.textContent = 'Password saved to server vault.';
-                            saveStatus.className = 'small text-success';
+                if (!label) {
+                    showToast('Enter what this password is for, such as LinkedIn.', 'error');
+                    accountLabelInput.focus();
+                    return;
+                }
+
+                const serverUser = window.SHIELDOS_USER || null;
+
+                if (serverUser) {
+                    setButtonLoading(confirmSaveBtn, true, 'Saving and emailing...');
+                    savePasswordBtn.disabled = true;
+                    try {
+                        const response = await fetch('save_password.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: new URLSearchParams({ password, label }).toString()
+                        });
+                        const data = await response.json();
+                        if (saveModal) saveModal.hide();
+                        if (data && data.success) {
+                            if (saveStatus) {
+                                saveStatus.textContent = data.email_sent ? 'Saved and emailed.' : 'Saved, but email could not be sent.';
+                                saveStatus.className = data.email_sent ? 'small text-success' : 'small text-warning';
+                            }
+                            showToast(data.email_sent ? 'Password saved and sent to your email.' : 'Password saved, but email delivery failed.', data.email_sent ? 'success' : 'warning');
+                            setTimeout(() => { location.href = 'vault.php?saved=1'; }, 1200);
+                        } else {
+                            throw new Error(data.message || 'Could not save password.');
                         }
-                        // Reload to show server-rendered vault entries
-                        setTimeout(() => location.reload(), 600);
-                    } else {
+                    } catch (err) {
+                        if (saveModal) saveModal.hide();
                         if (saveStatus) {
-                            saveStatus.textContent = data.message || 'Could not save password.';
+                            saveStatus.textContent = 'Server error while saving password.';
                             saveStatus.className = 'small text-danger';
                         }
+                        showToast(err.message || 'Server error while saving password.', 'error');
+                    } finally {
+                        setButtonLoading(confirmSaveBtn, false);
+                        updateSaveButtonState(savePasswordBtn, passwordInput, generatedPassword);
                     }
-                }).catch(err => {
-                    if (saveStatus) {
-                        saveStatus.textContent = 'Server error while saving password.';
-                        saveStatus.className = 'small text-danger';
-                    }
-                });
-                return;
-            }
-
-            // Fallback: client-side vault storage
-            const entry = { label, password, created_at: new Date().toLocaleString() };
-            const clientUser = user;
-            if (clientUser) {
-                addVaultEntry(clientUser.email, entry);
-                if (saveStatus) {
-                    saveStatus.textContent = 'Password saved to your vault.';
-                    saveStatus.className = 'small text-success';
+                } else if (saveStatus) {
+                    saveStatus.textContent = 'Your session has expired. Please log in again.';
+                    saveStatus.className = 'small text-danger';
+                    showToast('Your session has expired. Please log in again.', 'error');
                 }
-                renderVaultEntries(clientUser.email);
-                return;
-            }
-
-            // If no server or client user, redirect to login
-            location.href = 'login.php';
-        });
+            });
+        }
     }
 
     if (auditBtn) {
@@ -217,45 +215,126 @@ function initDashboardPage() {
                 return;
             }
 
-            statusBox.innerHTML = `<h6 class="text-info"><i class="fa-solid fa-spinner fa-spin me-2"></i>Analyzing...</h6><p class="small text-muted mb-0">Checking password strength...</p>`;
+            statusBox.innerHTML = `<h6 class="text-info"><i class="fa-solid fa-spinner fa-spin me-2"></i>Analyzing...</h6><p class="small text-muted mb-0">Checking password strength and breaches...</p>`;
+            setButtonLoading(auditBtn, true, 'Checking...');
 
             const breachCount = await checkPasswordBreach(targetString).catch(() => -1);
             const strength = getPasswordStrength(targetString);
+            setButtonLoading(auditBtn, false);
             if (breachCount < 0) {
                 statusBox.innerHTML = `
-                    <h6 class="text-secondary"><i class="fa-solid fa-circle-info me-2"></i>Audit Complete</h6>
-                    <p class="small mb-2">Breach check unavailable in this environment. Use the strength meter for guidance.</p>
+                    <h6 class="text-info fw-bold mb-2"><i class="fa-solid fa-circle-info me-2"></i>Audit Complete</h6>
+                    <p class="small text-muted mb-2">Breach check unavailable in this environment.</p>
                     <p class="small mb-0"><strong>Strength:</strong> ${strength.label} (${strength.score}/6)</p>
                 `;
+                showToast('Breach service is unavailable right now.', 'warning');
                 return;
             }
 
             if (breachCount > 0) {
                 statusBox.innerHTML = `
-                    <h6 class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-2"></i>WARNING: Breach Detected</h6>
-                    <p class="small mb-2">This password has been exposed in ${breachCount.toLocaleString()} data breaches.</p>
+                    <h6 class="text-danger fw-bold mb-2"><i class="fa-solid fa-triangle-exclamation me-2"></i>Warning: Breach Detected</h6>
+                    <p class="small text-muted mb-2">Exposed in ${breachCount.toLocaleString()} data breaches.</p>
                     <p class="small mb-0"><strong>Strength:</strong> ${strength.label} (${strength.score}/6)</p>
                 `;
+                showToast('Warning: this password was found in breach data.', 'error');
             } else {
                 statusBox.innerHTML = `
-                    <h6 class="text-success fw-bold"><i class="fa-solid fa-circle-check me-2"></i>SECURE</h6>
-                    <p class="small mb-2">No breaches detected. This password hasn't appeared in known data breaches.</p>
+                    <h6 class="text-success fw-bold mb-2"><i class="fa-solid fa-circle-check me-2"></i>Secure</h6>
+                    <p class="small text-muted mb-2">No breaches detected.</p>
                     <p class="small mb-0"><strong>Strength:</strong> ${strength.label} (${strength.score}/6)</p>
                 `;
+                showToast('No breach found for this password.', 'success');
             }
         });
     }
 
-    if (user) {
-        renderVaultEntries(user.email);
-    }
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) target.scrollIntoView({ behavior: 'smooth' });
+}
+
+function initVaultPage() {
+    showQueryToast();
+
+    const deleteModalElement = document.getElementById('deleteVaultModal');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteVaultBtn');
+    let pendingDeleteForm = null;
+
+    document.querySelectorAll('.vault-copy-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(button.dataset.password || '');
+                showToast('Password copied to clipboard.', 'success');
+            } catch (err) {
+                showToast('Could not copy the password.', 'error');
+            }
         });
     });
+
+    document.querySelectorAll('.vault-delete-form').forEach(form => {
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            pendingDeleteForm = form;
+
+            if (deleteModalElement && window.bootstrap) {
+                const modal = bootstrap.Modal.getOrCreateInstance(deleteModalElement);
+                modal.show();
+            } else {
+                form.submit();
+            }
+        });
+    });
+
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (deleteModalElement && window.bootstrap) {
+                const modal = bootstrap.Modal.getInstance(deleteModalElement);
+                if (modal) modal.hide();
+            }
+
+            if (pendingDeleteForm) {
+                setButtonLoading(pendingDeleteForm.querySelector('button[type="submit"]'), true, 'Deleting...');
+                pendingDeleteForm.submit();
+            }
+        });
+    }
+}
+
+function showToast(message, type = 'info') {
+    const colors = {
+        success: '#198754',
+        error: '#dc3545',
+        warning: '#f59e0b',
+        info: '#0d6efd'
+    };
+
+    if (typeof Toastify === 'function') {
+        Toastify({
+            text: message,
+            duration: 3500,
+            gravity: 'top',
+            position: 'right',
+            close: true,
+            style: { background: colors[type] || colors.info }
+        }).showToast();
+    }
+}
+
+function showQueryToast() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('saved') === '1') showToast('Password saved to your vault.', 'success');
+    if (params.get('deleted') === '1') showToast('Password removed from your vault.', 'success');
+    if (params.get('email') === 'sent') showToast('Password sent to your email.', 'success');
+}
+
+function setButtonLoading(button, loading, label = 'Loading...') {
+    if (!button) return;
+    if (loading) {
+        button.dataset.originalContent = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${label}`;
+    } else {
+        button.disabled = false;
+        if (button.dataset.originalContent) button.innerHTML = button.dataset.originalContent;
+    }
 }
 
 function setPasswordToggle(button, passwordInput, eyeIcon) {
@@ -268,12 +347,6 @@ function setPasswordToggle(button, passwordInput, eyeIcon) {
     });
 }
 
-function showFormMessage(element, text, type) {
-    if (!element) return;
-    element.className = `alert alert-${type}`;
-    element.textContent = text;
-}
-
 function showQueryMessage(element) {
     if (!element) return;
     const params = new URLSearchParams(window.location.search);
@@ -281,29 +354,8 @@ function showQueryMessage(element) {
         element.className = 'alert alert-success';
         element.textContent = 'Account created successfully. Please log in.';
         element.classList.remove('d-none');
+        showToast('Account created successfully. Please log in.', 'success');
     }
-}
-
-function validateEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function getStoredUsers() {
-    try {
-        const raw = localStorage.getItem('shieldosUsers');
-        return raw ? JSON.parse(raw) : [];
-    } catch (err) {
-        return [];
-    }
-}
-
-function saveStoredUsers(users) {
-    localStorage.setItem('shieldosUsers', JSON.stringify(users));
-}
-
-function findUserByEmail(email) {
-    const users = getStoredUsers();
-    return users.find(user => user.email === email);
 }
 
 function getCurrentUser() {
@@ -312,15 +364,6 @@ function getCurrentUser() {
     } catch (err) {
         return null;
     }
-}
-
-function setCurrentUser(user) {
-    localStorage.setItem('shieldosCurrentUser', JSON.stringify(user));
-}
-
-function logoutUser() {
-    localStorage.removeItem('shieldosCurrentUser');
-    location.href = 'login.php';
 }
 
 function getVaultEntriesForUser(email) {
@@ -357,7 +400,7 @@ function renderVaultEntries(userEmail) {
     vaultContent.innerHTML = '';
 
     if (!entries.length) {
-        vaultContent.innerHTML = `<div class="alert alert-info" id="vaultEmptyMessage">No saved passwords found yet. Generate a password and save it using the button above.</div>`;
+        vaultContent.innerHTML = `<div class="alert alert-info">No saved passwords found yet.</div>`;
         return;
     }
 
@@ -367,7 +410,8 @@ function renderVaultEntries(userEmail) {
         <table class="table table-striped align-middle">
             <thead>
                 <tr>
-                    <th>Label</th>
+                    <th>#</th>
+                    <th>Account / Service</th>
                     <th>Password</th>
                     <th>Saved at</th>
                     <th class="text-end">Actions</th>
@@ -381,6 +425,7 @@ function renderVaultEntries(userEmail) {
     entries.forEach((entry, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
+            <td><strong>#${index + 1}</strong></td>
             <td>${escapeHtml(entry.label)}</td>
             <td><code>${escapeHtml(entry.password)}</code></td>
             <td>${escapeHtml(entry.created_at)}</td>
@@ -449,27 +494,17 @@ function getPasswordStrength(pwd) {
         /[^A-Za-z0-9]/.test(pwd)
     ].reduce((sum, value) => sum + (value ? 1 : 0), 0);
 
-    if (score <= 1) {
-        return { score, percentage: 15, label: 'Very Weak', color: 'bg-danger' };
-    }
-    if (score <= 2) {
-        return { score, percentage: 30, label: 'Weak', color: 'bg-danger' };
-    }
-    if (score <= 3) {
-        return { score, percentage: 50, label: 'Fair', color: 'bg-warning' };
-    }
-    if (score <= 4) {
-        return { score, percentage: 75, label: 'Good', color: 'bg-info' };
-    }
-    if (score <= 5) {
-        return { score, percentage: 90, label: 'Strong', color: 'bg-success' };
-    }
+    if (score <= 1) return { score, percentage: 15, label: 'Very Weak', color: 'bg-danger' };
+    if (score <= 2) return { score, percentage: 30, label: 'Weak', color: 'bg-danger' };
+    if (score <= 3) return { score, percentage: 50, label: 'Fair', color: 'bg-warning' };
+    if (score <= 4) return { score, percentage: 75, label: 'Good', color: 'bg-info' };
+    if (score <= 5) return { score, percentage: 90, label: 'Strong', color: 'bg-success' };
     return { score, percentage: 100, label: 'Very Strong', color: 'bg-success' };
 }
 
 function generateMemorablePassword(name, length, useUppercase, useLowercase, useNumbers, useSymbols) {
     if (!name || name.trim() === '') {
-        alert('Please enter your full name to generate a memorable password');
+        alert('Please enter your name to generate a password');
         return null;
     }
 
@@ -479,7 +514,7 @@ function generateMemorablePassword(name, length, useUppercase, useLowercase, use
     if (useNumbers) charset += '0123456789';
     if (useSymbols) charset += '!@#$%^&*-_=+';
     if (!charset) {
-        alert('Please select at least one character type');
+        alert('Select at least one character set');
         return null;
     }
 
@@ -488,11 +523,8 @@ function generateMemorablePassword(name, length, useUppercase, useLowercase, use
     nameParts.forEach((part, index) => {
         if (part.length > 0) {
             let letter = (index === 0 || index === nameParts.length - 1) ? part.substring(0, 2) : part.charAt(0);
-            if (useUppercase && !useLowercase) {
-                letter = letter.toUpperCase();
-            } else if (useLowercase && !useUppercase) {
-                letter = letter.toLowerCase();
-            }
+            if (useUppercase && !useLowercase) letter = letter.toUpperCase();
+            else if (useLowercase && !useUppercase) letter = letter.toLowerCase();
             base += letter;
         }
     });
@@ -507,26 +539,16 @@ function generateMemorablePassword(name, length, useUppercase, useLowercase, use
 
 async function checkPasswordBreach(password) {
     try {
-        const msgBuffer = new TextEncoder().encode(password);
-        const digest = await crypto.subtle.digest('SHA-1', msgBuffer);
-        const sha1Hash = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
-        const prefix = sha1Hash.slice(0, 5);
-        const suffix = sha1Hash.slice(5);
-        const url = `https://api.pwnedpasswords.com/range/${prefix}`;
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: { 'Add-Padding': 'true' }
+        const response = await fetch('process.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ target: password }).toString()
         });
-        if (!response.ok) {
-            throw new Error('Breach API unavailable');
-        }
-        const body = await response.text();
-        return body.split('\n').reduce((count, line) => {
-            const [hashSuffix, occurrences] = line.trim().split(':');
-            return hashSuffix === suffix ? parseInt(occurrences, 10) : count;
-        }, 0);
+        if (!response.ok) throw new Error('API unavailable');
+        const data = await response.json();
+        if (data.status !== 'success') throw new Error(data.message || 'API unavailable');
+        return Number(data.breach_count) || 0;
     } catch (err) {
         return -1;
     }
 }
-EOF

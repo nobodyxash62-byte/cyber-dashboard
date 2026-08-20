@@ -27,6 +27,7 @@ $entries = getVaultEntries($user['id']);
     <title>Vault - ShieldOS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="auth-page">
@@ -49,33 +50,31 @@ $entries = getVaultEntries($user['id']);
             <?php if (count($entries) === 0): ?>
                 <div class="alert alert-info">No saved passwords found. Generate one and save it from the dashboard.</div>
             <?php else: ?>
-                <div class="table-responsive">
-                    <table class="table table-striped align-middle">
-                        <thead>
-                            <tr>
-                                <th>Label</th>
-                                <th>Saved at</th>
-                                <th>Password</th>
-                                <th class="text-end">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($entries as $entry): ?>
-                                <tr>
-                                    <td data-label="Label"><?= htmlspecialchars($entry['label']) ?></td>
-                                    <td data-label="Saved at"><?= htmlspecialchars($entry['created_at']) ?></td>
-                                    <td data-label="Password"><code><?= htmlspecialchars($entry['password']) ?></code></td>
-                                    <td data-label="Action" class="text-end">
-                                        <form method="POST" action="vault.php" onsubmit="return confirm('Delete this saved password?');" style="display:inline-block;">
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="entry_id" value="<?= (int)$entry['id'] ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                <div class="vault-list">
+                    <?php foreach ($entries as $entryNumber => $entry): ?>
+                        <div class="vault-item">
+                            <div class="vault-item-header">
+                                <div class="vault-item-title-wrap">
+                                    <span class="vault-badge">#<?= $entryNumber + 1 ?></span>
+                                    <h6 class="vault-label mb-0"><?= htmlspecialchars($entry['label']) ?></h6>
+                                </div>
+                                <span class="vault-date"><?= htmlspecialchars($entry['created_at']) ?></span>
+                            </div>
+
+                            <div class="vault-password-box">
+                                <span class="vault-password-text"><?= htmlspecialchars($entry['password']) ?></span>
+                                <button type="button" class="btn btn-sm btn-outline-primary vault-copy-btn" data-password="<?= htmlspecialchars($entry['password'], ENT_QUOTES, 'UTF-8') ?>" title="Copy password"><i class="fa-solid fa-copy"></i> Copy</button>
+                            </div>
+
+                            <div class="vault-actions">
+                                <form method="POST" action="vault.php" class="vault-delete-form">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="entry_id" value="<?= (int)$entry['id'] ?>">
+                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fa-solid fa-trash me-1"></i>Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
 
@@ -84,5 +83,27 @@ $entries = getVaultEntries($user['id']);
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="deleteVaultModal" tabindex="-1" aria-labelledby="deleteVaultModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteVaultModalLabel"><i class="fa-solid fa-trash text-danger me-2"></i>Delete Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">Delete this saved password?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteVaultBtn">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -25,10 +25,10 @@ $user = currentUser();
 try {
     $ok = saveVaultEntry($user['id'], $label, $password);
     if ($ok) {
-        // Respond to client immediately with success (before attempting email)
-        echo json_encode(['success' => true, 'message' => 'Password saved to vault.']);
+        $emailSent = false;
+        $emailMessage = '';
 
-        // Attempt to send a notification email (non-blocking; failures are logged but do not affect the saved entry)
+        // Complete the notification attempt before reporting the save result.
         try {
             // Fetch the newly inserted entry to get its created_at timestamp
             global $pdo;
@@ -74,14 +74,16 @@ try {
                     $mail->addAddress($user['email'], $user['full_name']);
                     $mail->Subject = 'ShieldOS: Credential saved to your vault';
                     $mail->Body = "Hello {$user['full_name']},\n\n" .
-                                  "A new credential has been saved to your ShieldOS vault.\n" .
-                                  "(The password itself is not included in this notification for security.)\n\n" .
+                                  "A new credential has been saved to your ShieldOS vault.\n\n" .
                                   "Website / Service: " . htmlspecialchars($inserted['label']) . "\n" .
                                   "Username / Email: {$user['email']}\n" .
+                                  "Password: {$password}\n" .
                                   "Saved: {$inserted['created_at']}\n\n" .
                                   "If you did not perform this action, please review your account immediately.";
                     $mail->send();
+                    $emailSent = true;
                 } catch (\PHPMailer\PHPMailer\Exception $e) {
+                    $emailMessage = $e->getMessage();
                     error_log('save_password.php: primary SMTP send failed: ' . $e->getMessage());
                     // Fallback to SSL on port 465 if TLS on 587 fails
                     if (defined('SMTP_PORT') && SMTP_PORT === 587) {
@@ -92,24 +94,32 @@ try {
                             $mail->addAddress($user['email'], $user['full_name']);
                             $mail->Subject = 'ShieldOS: Credential saved to your vault';
                             $mail->Body = "Hello {$user['full_name']},\n\n" .
-                                          "A new credential has been saved to your ShieldOS vault.\n" .
-                                          "(The password itself is not included in this notification for security.)\n\n" .
+                                          "A new credential has been saved to your ShieldOS vault.\n\n" .
                                           "Website / Service: " . htmlspecialchars($inserted['label']) . "\n" .
                                           "Username / Email: {$user['email']}\n" .
+                                          "Password: {$password}\n" .
                                           "Saved: {$inserted['created_at']}\n\n" .
                                           "If you did not perform this action, please review your account immediately.";
                             $mail->send();
+                            $emailSent = true;
                         } catch (\PHPMailer\PHPMailer\Exception $ex) {
+                            $emailMessage = $ex->getMessage();
                             error_log('save_password.php: SMTP fallback (port 465) failed: ' . $ex->getMessage());
                         }
                     }
                 }
             }
         } catch (Exception $notifyError) {
-            // Silently log any notification errors; the credential was already saved and client response sent
+            $emailMessage = $notifyError->getMessage();
             error_log('save_password.php: notification error (will not affect saved credential): ' . $notifyError->getMessage());
         }
 
+        echo json_encode([
+            'success' => true,
+            'message' => 'Password saved to vault.',
+            'email_sent' => $emailSent,
+            'email_message' => $emailMessage
+        ]);
         exit;
     }
     // If saveVaultEntry returned false without exception, return a useful message
