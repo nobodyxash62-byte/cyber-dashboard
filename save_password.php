@@ -71,7 +71,7 @@ try {
                 try {
                     $configureSMTP($mail, SMTP_PORT, SMTP_SECURE);
                     $mail->setFrom(SMTP_FROM, 'ShieldOS Vault');
-                    $mail->addAddress($user['email'], $user['full_name']);
+                    $mail->addAddress(trim((string) $user['email']), trim((string) $user['full_name']) ?: 'User');
                     $mail->Subject = 'ShieldOS: Credential saved to your vault';
                     $mail->Body = "Hello {$user['full_name']},\n\n" .
                                   "A new credential has been saved to your ShieldOS vault.\n\n" .
@@ -91,7 +91,7 @@ try {
                             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
                             $configureSMTP($mail, 465, 'ssl');
                             $mail->setFrom(SMTP_FROM, 'ShieldOS Vault');
-                            $mail->addAddress($user['email'], $user['full_name']);
+                            $mail->addAddress(trim((string) $user['email']), trim((string) $user['full_name']) ?: 'User');
                             $mail->Subject = 'ShieldOS: Credential saved to your vault';
                             $mail->Body = "Hello {$user['full_name']},\n\n" .
                                           "A new credential has been saved to your ShieldOS vault.\n\n" .
