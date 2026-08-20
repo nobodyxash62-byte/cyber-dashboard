@@ -13,11 +13,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
     $res = loginUser($email, $password);
-    if ($res['success']) {
+    
+    if (is_array($res) && !empty($res['success'])) {
         header('Location: index.php');
         exit;
     }
-    $error = $res['message'];
+    
+    $error = is_array($res) ? ($res['message'] ?? 'Login failed.') : 'Unable to connect to database or invalid credentials.';
 }
 ?>
 <!DOCTYPE html>
